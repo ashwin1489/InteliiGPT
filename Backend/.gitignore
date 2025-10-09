@@ -5,15 +5,14 @@
 # LLM_PROVIDER=gemini
 
 
-#  MONGODB_URI = mongodb+srv://admin:admin@cluster0.vbarago.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-
+#  MONGODB_URI = mongodb+srv://admin
 
 #  GEMINI_MODEL=gemini-1.5-flash
 # GOOGLE_API_VERSION=v1
 # OpenAI not needed if you’re Gemini-only, but harmless if left
 OPENAI_API_KEY=sk-svcacct-REDACTED
 
-GOOGLE_API_KEY=AIzaSyCbHUNRhsVP0Xv0aKfMQZcVlvtlhyAmR6I
+GOOGLE_API_KEY=AIzaS
 # LLM_PROVIDER=gemini
 GEMINI_MODEL=gemini-2.5-flash
 
@@ -21,5 +20,5 @@ GEMINI_MODEL=gemini-2.5-flash
 GOOGLE_API_VERSION=v1beta   # <- switch from v1 to v1beta
 
 # Add a DB name (good practice)
-MONGODB_URI=mongodb+srv://admin:admin@cluster0.vbarago.mongodb.net/app?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_URI=mongodb+srv://admin
 
