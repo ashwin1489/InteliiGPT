@@ -1,101 +1,218 @@
+// import "./ChatWindow.css";
+// import Chat from "./Chat.jsx";
+// import { MyContext } from "./MyContext.jsx";
+// import { useContext, useState, useEffect } from "react";
+// import {ScaleLoader} from "react-spinners";
+
+// function ChatWindow() {
+//     const {prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat} = useContext(MyContext);
+//     const [loading, setLoading] = useState(false);
+//     const [isOpen, setIsOpen] = useState(false);
+
+//     const getReply = async () => {
+//         setLoading(true);
+//         setNewChat(false);
+
+//         console.log("message ", prompt, " threadId ", currThreadId);
+//         const options = {
+//             method: "POST",
+//             headers: {
+//                 "Content-Type": "application/json"
+//             },
+//             body: JSON.stringify({
+//                 message: prompt,
+//                 threadId: currThreadId
+//             })
+//         };
+
+//         try {
+//             const response = await fetch("http://localhost:8080/api/chat", options);
+//             const res = await response.json();
+//             console.log(res);
+//             setReply(res.reply);
+//         } catch(err) {
+//             console.log(err);
+//         }
+//         setLoading(false);
+//     }
+
+//     //Append new chat to prevChats
+//     useEffect(() => {
+//         if(prompt && reply) {
+//             setPrevChats(prevChats => (
+//                 [...prevChats, {
+//                     role: "user",
+//                     content: prompt
+//                 },{
+//                     role: "assistant",
+//                     content: reply
+//                 }]
+//             ));
+//         }
+
+//         setPrompt("");
+//     }, [reply]);
+
+
+//     const handleProfileClick = () => {
+//         setIsOpen(!isOpen);
+//     }
+
+//     return (
+//         <div className="chatWindow">
+//             <div className="navbar">
+//                 <span>SigmaGPT <i className="fa-solid fa-chevron-down"></i></span>
+//                 <div className="userIconDiv" onClick={handleProfileClick}>
+//                     <span className="userIcon"><i className="fa-solid fa-user"></i></span>
+//                 </div>
+//             </div>
+//             {
+//                 isOpen && 
+//                 <div className="dropDown">
+//                     <div className="dropDownItem"><i class="fa-solid fa-gear"></i> Settings</div>
+//                     <div className="dropDownItem"><i class="fa-solid fa-cloud-arrow-up"></i> Upgrade plan</div>
+//                     <div className="dropDownItem"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</div>
+//                 </div>
+//             }
+//             <Chat></Chat>
+
+//             <ScaleLoader color="#fff" loading={loading}>
+//             </ScaleLoader>
+            
+//             <div className="chatInput">
+//                 <div className="inputBox">
+//                     <input placeholder="Ask anything"
+//                         value={prompt}
+//                         onChange={(e) => setPrompt(e.target.value)}
+//                         onKeyDown={(e) => e.key === 'Enter'? getReply() : ''}
+//                     >
+                           
+//                     </input>
+//                     <div id="submit" onClick={getReply}><i className="fa-solid fa-paper-plane"></i></div>
+//                 </div>
+//                 <p className="info">
+//                     SigmaGPT can make mistakes. Check important info. See Cookie Preferences.
+//                 </p>
+//             </div>
+//         </div>
+//     )
+// }
+
+// export default ChatWindow;
+
+
+
+
+// src/ChatWindow.jsx
+import React, { useContext, useState, useEffect } from "react";
 import "./ChatWindow.css";
 import Chat from "./Chat.jsx";
 import { MyContext } from "./MyContext.jsx";
-import { useContext, useState, useEffect } from "react";
-import {ScaleLoader} from "react-spinners";
+import { ScaleLoader } from "react-spinners";
+import { apiFetch } from "./api.js";
 
 function ChatWindow() {
-    const {prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat} = useContext(MyContext);
-    const [loading, setLoading] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
+  const { prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat } =
+    useContext(MyContext);
 
-    const getReply = async () => {
-        setLoading(true);
-        setNewChat(false);
+  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-        console.log("message ", prompt, " threadId ", currThreadId);
-        const options = {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                message: prompt,
-                threadId: currThreadId
-            })
-        };
+  const getReply = async () => {
+    if (!prompt || !prompt.trim()) return;
+    setLoading(true);
+    setNewChat(false);
 
-        try {
-            const response = await fetch("http://localhost:8080/api/chat", options);
-            const res = await response.json();
-            console.log(res);
-            setReply(res.reply);
-        } catch(err) {
-            console.log(err);
-        }
-        setLoading(false);
+    try {
+      const res = await apiFetch("/api/chat", {
+        method: "POST",
+        body: { message: prompt, threadId: currThreadId },
+      });
+      // apiFetch returns parsed JSON or text
+      if (res && typeof res === "object" && "reply" in res) {
+        setReply(res.reply);
+      } else {
+        // If backend returned text or unexpected object
+        setReply(res?.reply ?? String(res));
+      }
+    } catch (err) {
+      console.error("getReply error:", err);
+      setReply("⚠️ Error: failed to get reply from server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Append new chat to prevChats when reply arrives
+  useEffect(() => {
+    if (prompt && reply) {
+      setPrevChats((prevChats) => [
+        ...prevChats,
+        { role: "user", content: prompt },
+        { role: "assistant", content: reply },
+      ]);
     }
 
-    //Append new chat to prevChats
-    useEffect(() => {
-        if(prompt && reply) {
-            setPrevChats(prevChats => (
-                [...prevChats, {
-                    role: "user",
-                    content: prompt
-                },{
-                    role: "assistant",
-                    content: reply
-                }]
-            ));
-        }
+    // Clear prompt after sending
+    setPrompt("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reply]);
 
-        setPrompt("");
-    }, [reply]);
+  const handleProfileClick = () => {
+    setIsOpen(!isOpen);
+  };
 
-
-    const handleProfileClick = () => {
-        setIsOpen(!isOpen);
-    }
-
-    return (
-        <div className="chatWindow">
-            <div className="navbar">
-                <span>SigmaGPT <i className="fa-solid fa-chevron-down"></i></span>
-                <div className="userIconDiv" onClick={handleProfileClick}>
-                    <span className="userIcon"><i className="fa-solid fa-user"></i></span>
-                </div>
-            </div>
-            {
-                isOpen && 
-                <div className="dropDown">
-                    <div className="dropDownItem"><i class="fa-solid fa-gear"></i> Settings</div>
-                    <div className="dropDownItem"><i class="fa-solid fa-cloud-arrow-up"></i> Upgrade plan</div>
-                    <div className="dropDownItem"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</div>
-                </div>
-            }
-            <Chat></Chat>
-
-            <ScaleLoader color="#fff" loading={loading}>
-            </ScaleLoader>
-            
-            <div className="chatInput">
-                <div className="inputBox">
-                    <input placeholder="Ask anything"
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter'? getReply() : ''}
-                    >
-                           
-                    </input>
-                    <div id="submit" onClick={getReply}><i className="fa-solid fa-paper-plane"></i></div>
-                </div>
-                <p className="info">
-                    SigmaGPT can make mistakes. Check important info. See Cookie Preferences.
-                </p>
-            </div>
+  return (
+    <div className="chatWindow">
+      <div className="navbar">
+        <span>
+          SigmaGPT <i className="fa-solid fa-chevron-down"></i>
+        </span>
+        <div className="userIconDiv" onClick={handleProfileClick}>
+          <span className="userIcon">
+            <i className="fa-solid fa-user"></i>
+          </span>
         </div>
-    )
+      </div>
+
+      {isOpen && (
+        <div className="dropDown">
+          <div className="dropDownItem">
+            <i className="fa-solid fa-gear"></i> Settings
+          </div>
+          <div className="dropDownItem">
+            <i className="fa-solid fa-cloud-arrow-up"></i> Upgrade plan
+          </div>
+          <div className="dropDownItem">
+            <i className="fa-solid fa-arrow-right-from-bracket"></i> Log out
+          </div>
+        </div>
+      )}
+
+      <Chat />
+
+      <div style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
+        <ScaleLoader loading={loading} />
+      </div>
+
+      <div className="chatInput">
+        <div className="inputBox">
+          <input
+            placeholder="Ask anything"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => (e.key === "Enter" ? getReply() : null)}
+          />
+          <div id="submit" onClick={getReply}>
+            <i className="fa-solid fa-paper-plane"></i>
+          </div>
+        </div>
+        <p className="info">
+          SigmaGPT can make mistakes. Check important info. See Cookie Preferences.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default ChatWindow;
